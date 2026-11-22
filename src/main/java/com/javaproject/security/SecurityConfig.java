@@ -53,38 +53,24 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests()
-                .antMatchers("/user/**").hasAnyRole("USER", "MANAGER") // sets up authorization
-                .antMatchers("/secured/**").hasAnyRole("USER", "MANAGER")
-                .antMatchers("/manager/**").hasRole("MANAGER")
-                .antMatchers("/h2-console/**").permitAll()
-                .antMatchers("/", "/**").permitAll() // allows access to index in templates
-                .and() // allows us to chain
-                .formLogin().loginPage("/login")
-                .defaultSuccessUrl("/secured")
-                .and()
-                .logout().invalidateHttpSession(true)
-                .clearAuthentication(true)
-                .and()
-                .exceptionHandling()
-                .accessDeniedHandler(accessDeniedHandler);
+protected void configure(AuthenticationManagerBuilder auth) throws Exception {
 
-        http.csrf().disable();
-        http.headers().frameOptions().disable();
+    String bugsPassword = System.getenv("BUGS_USER_PASSWORD");
+    String daffyPassword = System.getenv("DAFFY_USER_PASSWORD");
+
+    if (bugsPassword == null || bugsPassword.trim().isEmpty()
+            || daffyPassword == null || daffyPassword.trim().isEmpty()) {
+        throw new IllegalStateException("User passwords are not configured");
     }
 
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-
-        auth.jdbcAuthentication()
-                .dataSource(dataSource)
-                .withDefaultSchema()
-                .passwordEncoder(passwordEncoder)
-                .withUser("bugs")
-                .password(passwordEncoder.encode("bunny")).roles("USER")
-                .and()
-                .withUser("daffy")
-                .password(passwordEncoder.encode("duck")).roles("USER", "MANAGER");
-    }
+    auth.jdbcAuthentication()
+            .dataSource(dataSource)
+            .withDefaultSchema()
+            .passwordEncoder(passwordEncoder)
+            .withUser("bugs")
+            .password(passwordEncoder.encode(bugsPassword)).roles("USER")
+            .and()
+            .withUser("daffy")
+            .password(passwordEncoder.encode(daffyPassword)).roles("USER", "MANAGER");
+}
 }
